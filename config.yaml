@@ -1,0 +1,19 @@
+device: "cuda"
+data_path: "data/tiny_nerf_data.npz"
+
+train:
+  n_iters: 1
+  n_samples: 64
+  lr: 5e-4
+  i_plot: 25
+  save_every: 200
+  save_dir: "outputs"
+
+model:
+  D: 8
+  W: 256
+  L_embed: 6
+
+render:
+  near: 2.0
+  far: 6.0
