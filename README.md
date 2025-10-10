@@ -51,6 +51,12 @@ python main.py
 
 > The reconstructions illustrate this frequency-based learning process. Around epoch 200, the model reconstructs the overall shape and color distribution but remains blurry. By epoch 400, the contours become clearer, and from epochs 600 to 1000, the scene gains sharpness and depth consistency, revealing finer structures and specular details characteristic of successful volumetric rendering.
 
+<p align="center">
+  <img src="outputs/nerf_360.gif" alt="NeRF 360° Reconstruction" width="200"/>
+</p>
+
+> This 360° rendering demonstrates the full capability of the trained NeRF to synthesize consistent novel views of the scene, confirming that the model has successfully captured the underlying 3D geometry and radiance field of the object.
+
 ---
 
 ✅ Inspired by the original NeRF paper: *Mildenhall et al., ECCV 2020*
