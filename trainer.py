@@ -24,7 +24,7 @@ class Trainer:
 
         self.device = device
 
-        self.ssim = StructuralSimilarityIndexMeasure(data_range=1.0)
+        self.ssim = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
 
     def fit(self, train_ds, val_ds, epoch=10000, batch_size=1024, 
             near=2.0, far=6.0, n_samples=64, 
