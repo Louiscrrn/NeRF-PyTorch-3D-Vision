@@ -1,59 +1,49 @@
-# main.py
 import yaml
 import torch
-from torch.utils.data import DataLoader
 from dataset import LegoDataset
-from model import NeRFModel
+from model import NeRF, PositionalEncoding
 from trainer import Trainer
+import torch.optim as optim
 
 
 def main():
-    # -----------------------------------------------------
-    # Chargement de la configuration
-    # -----------------------------------------------------
+    
     with open("config.yaml", "r") as f:
         cfg = yaml.safe_load(f)
 
     device = cfg["device"]
-    if not torch.cuda.is_available():
-        device = "cpu"
-        print("⚠️  CUDA non disponible — entraînement sur CPU.\n")
-
-    print("=== TinyNeRF Training ===")
+   
+    print("=== NeRF Training ===")
     print(f"Device: {device}")
     print(f"Data: {cfg['data_path']}")
     print("---------------------------\n")
 
-    # -----------------------------------------------------
-    # Chargement du dataset et des DataLoaders
-    # -----------------------------------------------------
+    # -- Dataset loading --
     train_ds = LegoDataset(cfg["data_path"], split="train")
-    val_ds   = LegoDataset(cfg["data_path"], split="test")
-
-    train_loader = DataLoader(train_ds, batch_size=1, shuffle=True, num_workers=0)
-    val_loader   = DataLoader(val_ds, batch_size=1, shuffle=False, num_workers=0)
-
+    val_ds   = LegoDataset(cfg["data_path"], split="val")
     print(f"Train samples: {len(train_ds)} | Validation samples: {len(val_ds)}\n")
 
-    # -----------------------------------------------------
-    # Initialisation du modèle et du trainer
-    # -----------------------------------------------------
-    model = NeRFModel(**cfg["model"]).to(device)
-    trainer = Trainer(model, cfg, device=device)
+    # -- Model loading --
+    cfg_model = cfg["model"]
+    pos_encoder = PositionalEncoding(num_freqs=int(cfg_model["L_position"]))
+    dir_encoder = PositionalEncoding(num_freqs=int(cfg_model["L_direction"]))
+    model = NeRF(pos_input_size=pos_encoder.output_dims, pos_dir_size=dir_encoder.output_dims).to(device)
+    
+    # -- Trainer loading --
+    cfg_train = cfg["train"]
+    optimizer=optim.Adam(model.parameters(),lr=float(cfg_train['lr']))
+    scheduler=optim.lr_scheduler.ExponentialLR(
+        optimizer,
+        gamma=(cfg_train['lr_decay_rate']**(1/cfg_train['lr_decay_steps']))
+    )
+    trainer = Trainer(model, optimizer, scheduler, pos_encoder, dir_encoder, device=device)
 
-    # -----------------------------------------------------
-    # Lancement de l'entraînement
-    # -----------------------------------------------------
-    history = trainer.fit(train_loader, val_loader)
+    # -- Training --
+    render_cfg = cfg['render']
+    history = trainer.fit(train_ds, val_ds, epoch=int(cfg_train["epoch"]), batch_size=int(cfg_train["batch_size"]),
+                            near=float(render_cfg['near']), far=float(render_cfg['far']), n_samples=int(render_cfg['n_samples']),
+                             chunk_size=int(render_cfg['chunk_size']), logdir=cfg_train['logs_dir'], step_validation=int(cfg_train["step_validation"]) )
 
-    # -----------------------------------------------------
-    # Résumé final
-    # -----------------------------------------------------
-    print("\n=== Entraînement terminé ===")
-    if "psnr" in history and len(history["psnr"]) > 0:
-        print(f"Meilleur PSNR (val) : {max(history['psnr']):.2f} dB")
-    print(f"Images sauvegardées dans : {cfg['train'].get('save_dir', 'outputs/')}\n")
-    print("✅ Done.")
 
 
 if __name__ == "__main__":

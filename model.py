@@ -4,40 +4,106 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 # ---------- Positional Encoding ----------
-def posenc(x, L_embed=6):
-    rets = [x]
-    for i in range(L_embed):
-        for fn in [torch.sin, torch.cos]:
-            rets.append(fn((2. ** i) * x))
-    return torch.cat(rets, dim=-1)
+class PositionalEncoding(nn.Module):
+    """
+    Encodage sinusoïdal fixe utilisé par NeRF pour injecter les hautes fréquences.
+    Ce module n'apprend pas : il agit comme une transformation déterministe.
+    """
+    def __init__(self, num_freqs: int, input_dims: int = 3):
+        super().__init__()
+        self.num_freqs = num_freqs
+        self.input_dims = input_dims
+        self.output_dims = input_dims * (2 * num_freqs + 1)
+
+        if num_freqs > 0:
+            freqs = 2.0 ** torch.arange(num_freqs, dtype=torch.float32)
+            self.register_buffer("freqs", freqs)
+        else:
+            self.freqs = None
+        
+    def forward(self, x: torch.Tensor):
+
+        if self.num_freqs == 0:
+            return x
+
+        scaled = x.unsqueeze(-1) * self.freqs * torch.pi
+        sinusoids = torch.cat([torch.sin(scaled), torch.cos(scaled)], dim=-1)
+        sinusoids = sinusoids.view(*x.shape[:-1], -1)
+
+        return torch.cat([x, sinusoids], dim=-1)
 
 # ---------- NeRF Model ----------
-class NeRFModel(nn.Module):
-    def __init__(self, D=8, W=256, L_embed=6):
+class NeRF(nn.Module):
+    def __init__(self,
+                 pos_input_size,
+                 pos_dir_size,
+                 n_neurons=256) :
         super().__init__()
-        self.L_embed = L_embed
-        self.in_dim = 3 + 3 * 2 * L_embed
+        self.linear=nn.Linear(n_neurons,n_neurons)
 
-        self.layers = nn.ModuleList()
-        for i in range(D):
-            if i == 0:
-                self.layers.append(nn.Linear(self.in_dim, W))
-            elif i % 4 == 0:
-                self.layers.append(nn.Linear(W + self.in_dim, W))
-            else:
-                self.layers.append(nn.Linear(W, W))
-        self.output_layer = nn.Linear(W, 4)
-        self.relu = nn.ReLU()
+        self.mlp_1 = nn.Sequential(
+            nn.Linear(pos_input_size,n_neurons),
+            nn.ReLU(),
+            nn.Linear(n_neurons,n_neurons),
+            nn.ReLU(),
+            nn.Linear(n_neurons,n_neurons),
+            nn.ReLU(),
+            nn.Linear(n_neurons,n_neurons),
+            nn.ReLU()
+        )
 
-        for m in self.modules():
-            if isinstance(m, nn.Linear):
-                nn.init.xavier_uniform_(m.weight)
-                nn.init.zeros_(m.bias)
+        # With skip connexion
+        self.mlp_2 = nn.Sequential(
+            nn.Linear(pos_input_size + n_neurons,n_neurons),
+            nn.ReLU(),
+            nn.Linear(n_neurons,n_neurons),
+            nn.ReLU(),
+            nn.Linear(n_neurons,n_neurons),
+            nn.ReLU(),
+            nn.Linear(n_neurons,n_neurons),
+            nn.ReLU()
+        )
 
-    def forward(self, x):
-        inputs = x
-        for i, layer in enumerate(self.layers):
-            if i % 4 == 0 and i > 0:
-                x = torch.cat([x, inputs], dim=-1)
-            x = self.relu(layer(x))
-        return self.output_layer(x)
+        self.decode_sigma=nn.Sequential(
+            nn.Linear(n_neurons,1),
+            nn.ReLU(),
+        )
+
+        self.decode_rgb = nn.Sequential(
+            nn.Linear(pos_dir_size + n_neurons, n_neurons // 2),
+            nn.ReLU(),
+            nn.Linear(n_neurons // 2, 3),
+            nn.Sigmoid() 
+        )
+
+    def forward(self, x: torch.Tensor, dir: torch.Tensor):
+        
+        x_mlp1 = self.mlp_1(x)
+        x_mlp2 = self.mlp_2(torch.cat([x_mlp1, x], dim=-1))
+
+        sigma = self.decode_sigma(x_mlp2)
+
+        x_linear = self.linear(x_mlp2)
+
+        rgb = self.decode_rgb(torch.cat([x_linear, dir], dim=-1))
+
+        return rgb, sigma
+
+if __name__ == "__main__":
+
+    L_xyz, L_dir = 10, 4
+    encoder_input = PositionalEncoding(num_freqs=L_xyz)
+    encoder_dir = PositionalEncoding(num_freqs=L_dir)
+    
+    x = torch.randn(2, 3)
+    d = torch.randn(2, 3)
+
+    x_embed = encoder_input(x)
+    d_embed = encoder_dir(d)
+
+    model = NeRF(pos_input_size=x_embed.shape[-1],
+                 pos_dir_size=d_embed.shape[-1],
+                 n_neurons=256)
+
+    rgb, sigma = model(x_embed, d_embed)
+    print("RGB:", rgb.shape, "Sigma:", sigma.shape)

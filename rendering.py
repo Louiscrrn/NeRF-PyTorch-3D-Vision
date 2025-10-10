@@ -1,58 +1,131 @@
 import torch
-import torch.nn.functional as F
-from model import posenc
+from sampling import sample, dep_to_pos
+from dataset import get_rays
+from tqdm import tqdm
+from sampling import sample
 
-def get_rays(H, W, focal, c2w, device='cuda'):
-    if isinstance(H, torch.Tensor):
-        H = int(H.item())
-    if isinstance(W, torch.Tensor):
-        W = int(W.item())
-    if isinstance(focal, torch.Tensor):
-        focal = float(focal.item())
+def volume_render_pass(network_fn, rays_o, rays_d, z_vals, posenc, device='cuda'):
+    pts = rays_o[..., None, :] + rays_d[..., None, :] * z_vals[..., :, None]
+    pts_flat = posenc(pts.reshape(-1, 3))
+    raw = network_fn(pts_flat).reshape(*pts.shape[:-1], 4)
 
-    i, j = torch.meshgrid(
-        torch.arange(W, dtype=torch.float32, device=device),
-        torch.arange(H, dtype=torch.float32, device=device),
-        indexing='xy'
-    )
-    dirs = torch.stack([(i - W * 0.5) / focal,
-                        -(j - H * 0.5) / focal,
-                        -torch.ones_like(i)], dim=-1)
-    rays_d = torch.sum(dirs[..., None, :] * c2w[:3, :3], dim=-1)
-    rays_o = c2w[:3, -1].expand_as(rays_d)
-    return rays_o, rays_d
-
-
-def render_rays(network_fn, rays_o, rays_d, near, far, N_samples, L_embed=6, rand=False, device='cuda'):
-    rays_o, rays_d = rays_o.float(), rays_d.float()
-    z_vals = torch.linspace(near, far, N_samples, device=device).float()
-    if rand:
-        z_vals += torch.rand_like(z_vals) * (far - near) / N_samples
-
-    pts = rays_o[..., None, :] + rays_d[..., None, :] * z_vals[None, None, :, None]
-    pts_flat = pts.reshape(-1, 3)
-    pts_flat = posenc(pts_flat, L_embed=L_embed)
-
-    raw = []
-    chunk = 1024 * 32
-    for i in range(0, pts_flat.shape[0], chunk):
-        raw.append(network_fn(pts_flat[i:i + chunk]))
-    raw = torch.cat(raw, dim=0)
-    raw = raw.reshape(list(pts.shape[:-1]) + [4])
-
-    sigma_a = F.relu(raw[..., 3])
     rgb = torch.sigmoid(raw[..., :3])
-    dists = torch.cat([
-        z_vals[..., 1:] - z_vals[..., :-1],
-        torch.ones_like(z_vals[..., :1]) * 1e10
-    ], dim=-1)
+    sigma = torch.relu(raw[..., 3])
+    return volume_render(rgb, sigma, z_vals)
 
-    alpha = 1. - torch.exp(-sigma_a * dists)
-    T = torch.cumprod(torch.cat([torch.ones_like(alpha[..., :1]), 1. - alpha + 1e-10], dim=-1), dim=-1)[..., :-1]
+def volume_render(rgb, sigma, z_vals, white_bkgd=True):
+
+    deltas = z_vals[..., 1:] - z_vals[..., :-1]
+    deltas = torch.cat([deltas, torch.full_like(deltas[..., :1], torch.finfo(z_vals.dtype).max)], dim=-1)
+
+    alpha = 1. - torch.exp(-sigma * deltas)
+    T = cumprod(1. - alpha + 1e-10)
     weights = alpha * T
 
-    rgb_map = torch.sum(weights[..., None] * rgb, dim=-2)
+    rgb_map = torch.sum(weights.unsqueeze(-1) * rgb, dim=-2)
     depth_map = torch.sum(weights * z_vals, dim=-1)
     acc_map = torch.sum(weights, dim=-1)
 
-    return rgb_map, depth_map, acc_map
+    if white_bkgd:
+        rgb_map = rgb_map + (1. - acc_map.unsqueeze(-1))
+
+    return rgb_map, depth_map, acc_map, weights
+
+def cumprod(tensor):
+    ones = torch.ones_like(tensor[..., :1])
+    return torch.cumprod(torch.cat([ones, tensor[..., :-1]], dim=-1), dim=-1)
+
+
+def render_batch_of_rays( model, pos_enc_input, pos_enc_dir,
+                        rays_o, rays_d, near, far, N_samples,
+                    white_bkgd=True, device="cpu", chunk_size=4096
+):
+    """
+    Complete rendering pipeline for a batch of rays (coarse only).
+    """
+
+    z_vals = sample(rays_o, rays_d, near, far, N_samples, perturb=True, device=device)
+
+    pts = dep_to_pos(rays_o, rays_d, z_vals)
+
+    pts_flat = pts.reshape(-1, 3)
+    dirs_flat = rays_d.unsqueeze(1).expand_as(pts).reshape(-1, 3)
+    encoded_input = pos_enc_input(pts_flat)
+    encoded_dir = pos_enc_dir(dirs_flat)
+
+    rgb_list, sigma_list = [], []
+    for i in range(0, encoded_input.shape[0], chunk_size):
+        rgb, sigma = model(encoded_input[i:i+chunk_size], encoded_dir[i:i+chunk_size])
+        rgb_list.append(rgb)
+        sigma_list.append(sigma)
+
+    rgb = torch.cat(rgb_list, dim=0).reshape(rays_o.shape[0], N_samples, 3)
+    sigma = torch.cat(sigma_list, dim=0).reshape(rays_o.shape[0], N_samples)
+    return volume_render(rgb, sigma, z_vals, white_bkgd)
+
+
+def render_full_image(
+    model, encoder_input, encoder_dir, H: int, W: int, focal: float, c2w: torch.Tensor,
+    near: float, far: float, n_samples: int, white_bkgd: bool = False, device: str = "cpu", chunk_size: int = 4096,
+):
+    """
+    Render a full image (all rays) from a trained NeRF model.
+    """
+    rays_o, rays_d = get_rays(H, W, focal, c2w)
+    rays_o = rays_o.reshape(-1, 3).to(device)
+    rays_d = rays_d.reshape(-1, 3).to(device)
+
+    all_rgb_chunks = []
+
+    for i in tqdm(range(0, rays_o.shape[0], chunk_size), desc="Rendering full image"):
+        rays_o_chunk = rays_o[i:i + chunk_size]
+        rays_d_chunk = rays_d[i:i + chunk_size]
+
+        rgb_map, depth_map, acc_map, weights = render_batch_of_rays(
+            model=model,
+            pos_enc_input=encoder_input,
+            pos_enc_dir=encoder_dir,
+            rays_o=rays_o_chunk,
+            rays_d=rays_d_chunk,
+            near=near,
+            far=far,
+            N_samples=n_samples,
+            white_bkgd=white_bkgd,
+            device=device,
+            chunk_size=chunk_size,
+        )
+
+        all_rgb_chunks.append(rgb_map)
+
+    rendered_img = torch.cat(all_rgb_chunks, dim=0).reshape(H, W, 3)
+    return rendered_img
+
+
+if __name__ == "__main__":
+    from model import NeRF, PositionalEncoding
+    from dataset import LegoDataset
+    import imageio
+
+    dataset = LegoDataset("data/tiny_nerf_data.npz", split="val")
+    elem = dataset[0]
+
+    encoder_input = PositionalEncoding(num_freqs=6, input_dims=3).to("cpu")
+    encoder_dir = PositionalEncoding(num_freqs=4, input_dims=3).to("cpu")
+    model = NeRF(pos_input_size=encoder_input.output_dims, pos_dir_size=encoder_dir.output_dims).to("cpu")
+
+    rendered = render_full_image(
+        model=model,
+        encoder_input=encoder_input,
+        encoder_dir=encoder_dir,
+        H=dataset.H,
+        W=dataset.W,
+        focal=dataset.focal,
+        c2w=elem["c2w"],
+        near=2.0,
+        far=6.0,
+        n_samples=64,
+        white_bkgd=False,
+        device="cpu",
+    )
+
+    imageio.imwrite("render_val.png", (rendered.detach().numpy() * 255 * 255).astype("uint8"))

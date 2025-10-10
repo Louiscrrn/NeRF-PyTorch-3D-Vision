@@ -1,19 +1,25 @@
-device: "cuda"
+device: "cpu"
 data_path: "data/tiny_nerf_data.npz"
 
 train:
   n_iters: 1
-  n_samples: 64
   lr: 5e-4
-  i_plot: 25
-  save_every: 200
-  save_dir: "outputs"
+  lr_decay_rate: 0.1
+  lr_decay_steps: 5000
+  epoch: 1000
+  batch_size: 1024
+  logs_dir: "logs"
+  step_validation: 200
 
 model:
-  D: 8
-  W: 256
-  L_embed: 6
+  L_position: 10
+  L_direction: 4
+  n_neurons: 256
 
 render:
   near: 2.0
   far: 6.0
+  n_samples: 64
+  chunk_size: 4096
+
+
