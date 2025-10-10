@@ -77,7 +77,7 @@ def render_full_image(
 
     all_rgb_chunks = []
 
-    for i in tqdm(range(0, rays_o.shape[0], chunk_size), desc="Rendering full image"):
+    for i in range(0, rays_o.shape[0], chunk_size):
         rays_o_chunk = rays_o[i:i + chunk_size]
         rays_d_chunk = rays_d[i:i + chunk_size]
 
