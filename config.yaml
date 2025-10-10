@@ -1,4 +1,4 @@
-device: "cpu"
+device: "cuda"
 data_path: "data/tiny_nerf_data.npz"
 
 train:
