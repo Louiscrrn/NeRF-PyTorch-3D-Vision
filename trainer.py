@@ -87,7 +87,7 @@ class Trainer:
             self.history["lr"].append(current_lr)
 
             pbar.set_description(
-                f"[Iter {i}] Loss: {loss.item():.4f} | PSNR: {psnr.item():.2f} | SSIM: {ssim.item():.3f} | LR: {current_lr:.6f}"
+                f"[Iter {i}] Loss: {loss.item():.4f} | PSNR: {psnr.item():.2f} | LR: {current_lr:.6f}"
             )
 
             self.model.eval()
