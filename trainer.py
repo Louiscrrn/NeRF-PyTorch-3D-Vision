@@ -105,12 +105,12 @@ class Trainer:
                 print(f"Saved validation image at iteration {i}")
                 target_img_val = sample["target_rgbs"].reshape(val_ds.H, val_ds.W, 3).to(self.device)
                 psnr_val = psnr_metric(target_img_val, rendered_val)
-                ssim_val = self.ssim(
-                        rendered_val.permute(2, 0, 1).unsqueeze(0),
-                        target_img_val.permute(2, 0, 1).unsqueeze(0)
-                    )
+                #ssim_val = self.ssim(
+                #        rendered_val.permute(2, 0, 1).unsqueeze(0),
+                #        target_img_val.permute(2, 0, 1).unsqueeze(0)
+                #    )
                 print(f"Validation Metrics — Iter {i}")
-                print(f"PSNR: {psnr_val.item():.2f} | SSIM: {ssim_val.item():.4f}")
+                print(f"PSNR: {psnr_val.item():.2f} | SSIM: {0:.4f}")
 
             if (i + 1) % 2000 == 0:
                 ckpt_path = os.path.join(logdir, f"checkpoint_{i:06d}.tar")
