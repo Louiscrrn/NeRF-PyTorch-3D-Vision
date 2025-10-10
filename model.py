@@ -23,10 +23,8 @@ class PositionalEncoding(nn.Module):
         
     def forward(self, x: torch.Tensor):
 
-        if self.num_freqs == 0:
-            return x
-
-        scaled = x.unsqueeze(-1) * self.freqs * torch.pi
+        freqs = self.freqs.to(x.device)
+        scaled = x.unsqueeze(-1) * freqs * torch.pi
         sinusoids = torch.cat([torch.sin(scaled), torch.cos(scaled)], dim=-1)
         sinusoids = sinusoids.view(*x.shape[:-1], -1)
 
