@@ -73,9 +73,11 @@ class Trainer:
             self.scheduler.step()
 
             psnr = psnr_metric(target_rgb, rendered_rgb)
+            
+            current_lr = self.optimizer.param_groups[0]['lr']
 
             pbar.set_description(
-                f"[Iter {i}] Loss: {loss.item():.4f} | PSNR: {psnr.item():.2f}"
+                 f"[Iter {i}] Loss: {loss.item():.4f} | PSNR: {psnr.item():.2f} | LR: {current_lr:.6f}"
             )
 
             if (i + 1) % step_validation == 0:
