@@ -6,7 +6,7 @@ from tqdm import trange
 from rendering import render_full_image, render_batch_of_rays
 from sampling import sample, dep_to_pos
 from metrics import psnr_metric 
-from torchmetrics.image import StructuralSimilarityIndexMeasure
+from torchmetrics.functional.image import structural_similarity_index_measure
 
 class Trainer:
     """
@@ -23,8 +23,6 @@ class Trainer:
         self.dir_encoder = dir_encoder
 
         self.device = device
-
-        self.ssim = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
 
     def fit(self, train_ds, val_ds, epoch=10000, batch_size=1024, 
             near=2.0, far=6.0, n_samples=64, 
@@ -105,12 +103,12 @@ class Trainer:
                 print(f"Saved validation image at iteration {i}")
                 target_img_val = sample["target_rgbs"].reshape(val_ds.H, val_ds.W, 3).to(self.device)
                 psnr_val = psnr_metric(target_img_val, rendered_val)
-                #ssim_val = self.ssim(
-                #        rendered_val.permute(2, 0, 1).unsqueeze(0),
-                #        target_img_val.permute(2, 0, 1).unsqueeze(0)
-                #    )
+                ssim_val = structural_similarity_index_measure(
+                        rendered_val.permute(2, 0, 1).unsqueeze(0),
+                        target_img_val.permute(2, 0, 1).unsqueeze(0)
+                    )
                 print(f"Validation Metrics — Iter {i}")
-                print(f"PSNR: {psnr_val.item():.2f} | SSIM: {0:.4f}")
+                print(f"PSNR: {psnr_val.item():.2f} | SSIM: {ssim_val:.4f}")
 
             if (i + 1) % 2000 == 0:
                 ckpt_path = os.path.join(logdir, f"checkpoint_{i:06d}.tar")
