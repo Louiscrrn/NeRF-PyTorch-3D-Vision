@@ -59,4 +59,11 @@ python main.py
 
 ---
 
-✅ Inspired by the original NeRF paper: *Mildenhall et al., ECCV 2020*
+## 📚 References
+
+This implementation was inspired by the original NeRF paper:  
+**Mildenhall et al., “NeRF: Representing Scenes as Neural Radiance Fields for View Synthesis”, ECCV 2020.**
+
+Additional insights and details:  
+- [Minimal Implementation of NeRF using JAX and Flax — Saurav Maheshkar & Soumik Rakshit](https://www.kaggle.com/code/sauravmaheshkar/jax-flax-minimal-implementation-of-nerf)  
+- [Tiny-NeRF (PyTorch) — Rkuo2000](https://www.kaggle.com/code/rkuo2000/tiny-nerf/notebook)
