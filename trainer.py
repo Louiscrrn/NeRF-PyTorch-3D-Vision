@@ -48,8 +48,9 @@ class Trainer:
         all_rays_d = train_ds.all_rays_d.to(self.device)
         all_rgb_gt = train_ds.all_targets.to(self.device)
 
+        pbar = trange(epoch, desc="Training", leave=False)
         # Training loop
-        for i in range(epoch):
+        for i in pbar:
             ray_indices = torch.randint(0, all_rays_o.shape[0], (batch_size,), device=self.device)
             rays_o = all_rays_o[ray_indices]
             rays_d = all_rays_d[ray_indices]
