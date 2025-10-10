@@ -129,19 +129,14 @@ class Trainer:
             self.history["val_psnr"].append(psnr_val.item())
             self.history["val_ssim"].append(ssim_val.item())
 
-            if (i + 1) % 2000 == 0:
-                ckpt_path = os.path.join(logdir, f"checkpoint_{i:06d}.tar")
-                torch.save({
-                    "iteration": i,
-                    "model_state_dict": self.model.state_dict(),
-                    "optimizer_state_dict": self.optimizer.state_dict(),
-                    "scheduler_state_dict": self.scheduler.state_dict(),
-                }, ckpt_path)
-                print(f"Checkpoint saved at {ckpt_path}")
 
         hist_path = os.path.join(logdir, "training_history.npy")
         np.save(hist_path, self.history)
         print(f"\nTraining complete. History saved at {hist_path}")
+
+        model_path = os.path.join(logdir, f"model_{i:06d}.pth")
+        torch.save(self.model.state_dict(), model_path)
+        print(f"Model weights saved at {model_path}")
         
         print("Training complete")
         return
