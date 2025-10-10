@@ -73,10 +73,6 @@ class Trainer:
 
             loss = torch.mean((rendered_rgb - target_rgb) ** 2)
             psnr = psnr_metric(target_rgb, rendered_rgb)
-            ssim = structural_similarity_index_measure(
-                        rendered_rgb.permute(2, 0, 1).unsqueeze(0),
-                        target_rgb.permute(2, 0, 1).unsqueeze(0)
-                    )
             
             self.optimizer.zero_grad()
             loss.backward()
@@ -88,7 +84,6 @@ class Trainer:
             self.history["epoch"].append(i)
             self.history["train_loss"].append(loss.item())
             self.history["train_psnr"].append(psnr.item())
-            self.history["train_ssim"].append(ssim.item())
             self.history["lr"].append(current_lr)
 
             pbar.set_description(
