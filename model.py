@@ -36,6 +36,7 @@ class GaussianFourierEncoding(nn.Module):
 
     def forward(self, x: torch.Tensor):
         B = self.B.to(x.device)
+        x = x / torch.max(torch.abs(x), dim=-1, keepdim=True)[0].clamp(min=1e-6)
         x_proj = 2 * math.pi * x @ B  
 
         encoded = torch.cat([torch.sin(x_proj), torch.cos(x_proj)], dim=-1)
