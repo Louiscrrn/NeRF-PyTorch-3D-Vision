@@ -28,7 +28,7 @@ class GaussianFourierEncoding(nn.Module):
         super().__init__()
         self.input_dims = input_dims
         self.num_features = num_features
-        
+
         self.sigma = sigma
         self.output_dims = 2 * num_features
 
@@ -48,31 +48,34 @@ class NeRF(nn.Module):
     def __init__(self,
                  pos_input_size,
                  pos_dir_size,
-                 n_neurons=256) :
+                 n_neurons=256,
+                 activation="relu") :
         super().__init__()
         self.linear=nn.Linear(n_neurons,n_neurons)
 
+        self.act = self._get_activation(activation)
+
         self.mlp_1 = nn.Sequential(
             nn.Linear(pos_input_size,n_neurons),
-            nn.ReLU(),
+            self.act,
             nn.Linear(n_neurons,n_neurons),
-            nn.ReLU(),
+            self.act,
             nn.Linear(n_neurons,n_neurons),
-            nn.ReLU(),
+            self.act,
             nn.Linear(n_neurons,n_neurons),
-            nn.ReLU()
+            self.act,
         )
 
         # With skip connexion
         self.mlp_2 = nn.Sequential(
             nn.Linear(pos_input_size + n_neurons,n_neurons),
-            nn.ReLU(),
+            self.act,
             nn.Linear(n_neurons,n_neurons),
-            nn.ReLU(),
+            self.act,
             nn.Linear(n_neurons,n_neurons),
-            nn.ReLU(),
+            self.act,
             nn.Linear(n_neurons,n_neurons),
-            nn.ReLU()
+            self.act,
         )
 
         self.decode_sigma=nn.Sequential(
@@ -82,10 +85,25 @@ class NeRF(nn.Module):
 
         self.decode_rgb = nn.Sequential(
             nn.Linear(pos_dir_size + n_neurons, n_neurons // 2),
-            nn.ReLU(),
+            self.act,
             nn.Linear(n_neurons // 2, 3),
             nn.Sigmoid() 
         )
+
+    def _get_activation(name, beta=1, threshold=20):
+        if name == "relu":
+            return nn.ReLU()
+        elif name == "softplus":
+            return nn.Softplus(beta=beta, threshold=threshold)
+        elif name == "gelu":
+            return nn.GELU()
+        elif name == "silu":
+            return nn.SiLU() 
+        elif name == "tanh":
+            return nn.Tanh()
+        else:
+            raise ValueError(f"Unknown activation: {name}")
+
 
     def forward(self, x: torch.Tensor, dir: torch.Tensor):
         

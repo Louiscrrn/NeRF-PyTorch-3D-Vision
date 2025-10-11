@@ -32,7 +32,7 @@ def main():
         pos_encoder = GaussianFourierEncoding(num_features=int(cfg_model['num_features']), sigma=int(cfg_model['sigma']))
         dir_encoder = GaussianFourierEncoding(num_features=int(cfg_model['num_features']) // 2, sigma=int(cfg_model['sigma'])//2-1)
 
-    model = NeRF(pos_input_size=pos_encoder.output_dims, pos_dir_size=dir_encoder.output_dims).to(device)
+    model = NeRF(pos_input_size=pos_encoder.output_dims, pos_dir_size=dir_encoder.output_dims, activation=cfg_model["activation"]).to(device)
     
     # -- Trainer loading --
     cfg_train = cfg["train"]
