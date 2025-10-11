@@ -28,6 +28,7 @@ class GaussianFourierEncoding(nn.Module):
         super().__init__()
         self.input_dims = input_dims
         self.num_features = num_features
+        
         self.sigma = sigma
         self.output_dims = 2 * num_features
 
@@ -102,8 +103,8 @@ class NeRF(nn.Module):
 if __name__ == "__main__":
 
     L_xyz, L_dir = 10, 4
-    encoder_input = PositionalEncoding(num_freqs=L_xyz)
-    encoder_dir = PositionalEncoding(num_freqs=L_dir)
+    encoder_input = SinusEncoding(num_freqs=L_xyz)
+    encoder_dir = SinusEncoding(num_freqs=L_dir)
     
     x = torch.randn(2, 3)
     d = torch.randn(2, 3)
@@ -128,4 +129,6 @@ if __name__ == "__main__":
     d_embed = encoder_dir(d)
 
     print("Encoded shapes:", x_embed.shape, d_embed.shape)
+
+
 
