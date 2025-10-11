@@ -90,7 +90,7 @@ class NeRF(nn.Module):
             nn.Sigmoid() 
         )
 
-    def _get_activation(name, beta=1, threshold=20):
+    def _get_activation(self, name, beta=1, threshold=20):
         if name == "relu":
             return nn.ReLU()
         elif name == "softplus":
