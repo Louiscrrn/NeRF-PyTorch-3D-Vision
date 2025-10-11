@@ -40,9 +40,6 @@ def render_batch_of_rays( model, pos_enc_input, pos_enc_dir,
                         rays_o, rays_d, near, far, N_samples,
                     white_bkgd=True, device="cpu", chunk_size=4096
 ):
-    """
-    Complete rendering pipeline for a batch of rays (coarse only).
-    """
 
     z_vals = sample(rays_o, rays_d, near, far, N_samples, perturb=True, device=device)
 
