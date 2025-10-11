@@ -19,12 +19,6 @@ def get_rays(H, W, focal, c2w):
 
 
 class LegoDataset(Dataset):
-    """
-    Dataset PyTorch minimal pour Tiny NeRF (lego).
-    - split='train' : 100 premières vues (RGB)
-    - split='test'  : vue de holdout (index configurable)
-    Renvoie un dict: {image: (H,W,3) float32, pose: (4,4) float32, focal: float32}
-    """
     def __init__(self, npz_path: str, split: str = "train", holdout_index: int = 101, keep_rgb_channels: int = 3):
         super().__init__()
         data = np.load(npz_path)
