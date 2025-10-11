@@ -5,10 +5,6 @@ import torch.nn.functional as F
 
 # ---------- Positional Encoding ----------
 class PositionalEncoding(nn.Module):
-    """
-    Encodage sinusoïdal fixe utilisé par NeRF pour injecter les hautes fréquences.
-    Ce module n'apprend pas : il agit comme une transformation déterministe.
-    """
     def __init__(self, num_freqs: int, input_dims: int = 3):
         super().__init__()
         self.num_freqs = num_freqs
