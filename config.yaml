@@ -15,6 +15,9 @@ model:
   L_position: 10
   L_direction: 4
   n_neurons: 256
+  encoding: gaussian  # options: "sinus" (default) or "gaussian"
+  num_features: 256   # if gaussian
+  sigma: 10           # if gaussian
 
 render:
   near: 2.0

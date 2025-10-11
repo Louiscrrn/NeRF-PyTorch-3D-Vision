@@ -1,10 +1,10 @@
 # model.py
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import math
 
 # ---------- Positional Encoding ----------
-class PositionalEncoding(nn.Module):
+class SinusEncoding(nn.Module):
     def __init__(self, num_freqs: int, input_dims: int = 3):
         super().__init__()
         self.num_freqs = num_freqs
@@ -22,6 +22,23 @@ class PositionalEncoding(nn.Module):
         sinusoids = sinusoids.view(*x.shape[:-1], -1)
 
         return torch.cat([x, sinusoids], dim=-1)
+
+class GaussianFourierEncoding(nn.Module):
+    def __init__(self, num_features: int = 256, sigma: float = 10.0, input_dims: int = 3):
+        super().__init__()
+        self.input_dims = input_dims
+        self.num_features = num_features
+        self.sigma = sigma
+
+        B = torch.randn((input_dims, num_features)) * sigma
+        self.register_buffer("B", B)
+
+    def forward(self, x: torch.Tensor):
+
+        x_proj = 2 * math.pi * x @ self.B  
+
+        encoded = torch.cat([torch.sin(x_proj), torch.cos(x_proj)], dim=-1)
+        return encoded
 
 # ---------- NeRF Model ----------
 class NeRF(nn.Module):
@@ -98,3 +115,15 @@ if __name__ == "__main__":
 
     rgb, sigma = model(x_embed, d_embed)
     print("RGB:", rgb.shape, "Sigma:", sigma.shape)
+
+    encoder_input = GaussianFourierEncoding(input_dims=3, num_features=256, sigma=10.0)
+    encoder_dir = GaussianFourierEncoding(input_dims=3, num_features=128, sigma=4.0)
+
+    x = torch.randn(2, 3)
+    d = torch.randn(2, 3)
+
+    x_embed = encoder_input(x)
+    d_embed = encoder_dir(d)
+
+    print("Encoded shapes:", x_embed.shape, d_embed.shape)
+
