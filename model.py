@@ -29,6 +29,7 @@ class GaussianFourierEncoding(nn.Module):
         self.input_dims = input_dims
         self.num_features = num_features
         self.sigma = sigma
+        self.output_dims = 2 * num_features
 
         B = torch.randn((input_dims, num_features)) * sigma
         self.register_buffer("B", B)
