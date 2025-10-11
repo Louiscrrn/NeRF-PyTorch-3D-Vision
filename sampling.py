@@ -32,6 +32,6 @@ if __name__ == "__main__":
     near, far = 2.0, 6.0
 
     # Test coarse sampling
-    z_coarse = coarse_sample(rays_o, rays_d, near, far, 8, perturb=True, device='cpu')
+    z_coarse = sample(rays_o, rays_d, near, far, 8, perturb=True, device='cpu')
     print("Coarse z_vals:\n", z_coarse)
 

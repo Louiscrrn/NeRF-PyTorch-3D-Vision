@@ -4,7 +4,6 @@ import imageio
 import numpy as np
 from tqdm import trange
 from rendering import render_full_image, render_batch_of_rays
-from sampling import sample, dep_to_pos
 from metrics import psnr_metric 
 from torchmetrics.functional.image import structural_similarity_index_measure
 

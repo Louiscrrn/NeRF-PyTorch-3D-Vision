@@ -11,11 +11,8 @@ class PositionalEncoding(nn.Module):
         self.input_dims = input_dims
         self.output_dims = input_dims * (2 * num_freqs + 1)
 
-        if num_freqs > 0:
-            freqs = 2.0 ** torch.arange(num_freqs, dtype=torch.float32)
-            self.register_buffer("freqs", freqs)
-        else:
-            self.freqs = None
+        self.register_buffer("freqs", 2.0 ** torch.arange(num_freqs, dtype=torch.float32))
+        
         
     def forward(self, x: torch.Tensor):
 

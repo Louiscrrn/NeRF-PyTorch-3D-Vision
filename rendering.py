@@ -1,6 +1,6 @@
 import torch
 from sampling import sample, dep_to_pos
-from dataset import get_rays
+from rays_utils import get_rays
 from tqdm import tqdm
 from sampling import sample
 
