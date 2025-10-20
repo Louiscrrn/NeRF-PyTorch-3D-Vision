@@ -1,8 +1,6 @@
 import torch
 from sampling import sample, dep_to_pos
 from rays_utils import get_rays
-from tqdm import tqdm
-from sampling import sample
 
 def volume_render_pass(network_fn, rays_o, rays_d, z_vals, posenc, device='cuda'):
     pts = rays_o[..., None, :] + rays_d[..., None, :] * z_vals[..., :, None]

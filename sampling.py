@@ -1,13 +1,13 @@
 import torch
 
-def sample(ray_origins, ray_directions, near, far, n_coarse, perturb=True, device='cuda'):
+def sample(ray_origins, ray_directions, near, far, N_samples, perturb=True, device='cuda'):
     """
     Sample uniformly depths between near and far along rays.
     """
     n_rays = ray_origins.shape[0]
-    z_starts = torch.linspace(near, far, n_coarse + 1, device=device)[:-1]  # shape (n_coarse,)
-    depths = z_starts.unsqueeze(0).expand(n_rays, n_coarse).clone()
-    gap = (far - near) / n_coarse
+    z_starts = torch.linspace(near, far, N_samples + 1, device=device)[:-1]  # shape (n_coarse,)
+    depths = z_starts.unsqueeze(0).expand(n_rays, N_samples).clone()
+    gap = (far - near) / N_samples
 
     if perturb:
         offsets = torch.rand_like(depths) * gap
