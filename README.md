@@ -3,7 +3,7 @@
 This project is a PyTorch implementation of a Neural Radiance Field (NeRF) 
 trained and tested on the Lego dataset (Blender). Includes positional encoding, hierarchical sampling, and volumetric rendering.
 
-## 📁 Project structure
+## Project structure
 
 ```
 NeRF-PyTorch-3D-Vision/
@@ -29,20 +29,20 @@ NeRF-PyTorch-3D-Vision/
 ```
 ---
 
-## 📦 Requirements
+## Requirements
 Install dependencies from `requirements.txt`:
 ```bash
 pip install -r requirements.txt
 ```
 
-## 🚀 Training
+## Training
 
 **Run training:**
 ```bash
 python main.py
 ```
 
-## 📷 Results & Learning Curves
+## Results & Learning Curves
 
 <p align="center">
   <img src="outputs/plot_historic.png" alt="MultiUNet Prediction" width="1000"/>
@@ -74,11 +74,11 @@ python main.py
 
 > The models were trained for 1000 epochs with a batch size of 1024, a learning rate of 5e-4 (Adam optimizer with exponential decay), 64 samples per ray over a depth range of [2.0, 6.0] with a sinusoidal positional encoding (L = 10/4) and a 256-neuron MLP architecture, using Google Colab on a Tesla T4 GPU.
 
-## 📝 Notes
+## Notes
 
 > Gaussian Positional Encoding is still a work in progress
 
-## 📚 References
+## References
 
 This implementation was inspired by the original NeRF paper:  
 **Mildenhall et al., “NeRF: Representing Scenes as Neural Radiance Fields for View Synthesis”, ECCV 2020.**
