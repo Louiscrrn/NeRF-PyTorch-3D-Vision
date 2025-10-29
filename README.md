@@ -78,7 +78,7 @@ python main.py
 
 > Gaussian Positional Encoding is still a work in progress
 
-## References
+## References 
 
 This implementation was inspired by the original NeRF paper:  
 **Mildenhall et al., “NeRF: Representing Scenes as Neural Radiance Fields for View Synthesis”, ECCV 2020.**
