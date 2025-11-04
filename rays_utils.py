@@ -17,4 +17,4 @@ def get_rays(H, W, focal, c2w):
 
         rays_o = c2w[:3, 3].expand(rays_d.shape)
         
-        return rays_o, rays_d
+        return rays_o, rays_d 
